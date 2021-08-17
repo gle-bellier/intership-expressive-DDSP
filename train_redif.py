@@ -2,7 +2,7 @@ from redif.model import Model
 from redif.dataset import Dataset
 from redif.ema import EMAModelCheckPoint
 import torch
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader, random_split, ConcatDataset
 from pytorch_lightning import loggers as pl_loggers
 
 import pytorch_lightning as pl
@@ -13,14 +13,15 @@ class args(Config):
     CKPT = None
     DDSP = "ddsp_violin_pretrained.ts"
     DATA = None
+    VALIDATION = None
 
 
 args.parse_args()
 
 # CREATE AND SPLIT DATASET
-dataset = Dataset(256, args.DATA)
-val_n = len(dataset) // 50
-train, val = random_split(dataset, [len(dataset) - val_n, val_n])
+train = Dataset(256, args.DATA)
+val = ConcatDataset(
+    [Dataset(512, path) for path in args.VALIDATION.split(",")])
 
 # INSTANCIATE MODEL
 if args.CKPT is not None:
@@ -28,7 +29,7 @@ if args.CKPT is not None:
 else:
     model = Model(2, 128, [128, 256, 384])
 model.set_noise_schedule()
-model.transform.compute_stats(dataset.e_f0, dataset.e_lo)
+model.transform.compute_stats(train.e_f0, train.e_lo)
 model.ddsp = torch.jit.load(args.DDSP)
 
 # INSTANCIATE TRAINER
@@ -47,5 +48,5 @@ trainer = pl.Trainer(gpus=1,
 trainer.fit(
     model,
     DataLoader(train, 16, True, drop_last=True),
-    DataLoader(val, 16, False),
+    DataLoader(val, 16, False, drop_last=False),
 )

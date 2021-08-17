@@ -64,3 +64,7 @@ for i in tqdm(range(args.N_SAMPLE), desc="sampling"):
     sound = ddsp(f0.permute(0, 2, 1), lo.permute(0, 2, 1))
     name = f"sample_{i + n_sample:03d}.wav"
     sf.write(path.join(out_dir, name), sound.reshape(-1).numpy(), 16000)
+
+    name = f"env_{i + n_sample:03d}.npy"
+    env = np.stack([f0.reshape(-1).numpy(), lo.reshape(-1).numpy()], 0)
+    np.save(path.join(out_dir, name), env)

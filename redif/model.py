@@ -157,11 +157,10 @@ class Model(pl.LightningModule, DiffusionModel):
         return env
 
     def validation_epoch_end(self, out):
-        env = torch.cat(out, 0)[:64]
+        env = torch.cat(out, 0)
         x = torch.randn(env.shape[0], self.data_dim, env.shape[-1]).to(env)
 
         y = self.sample(x, env)  # GENERATE CONTOURS
-
         f0, lo = self.transform.inverse(y)  # INVERSE TRANSFORM
 
         if self.ddsp is not None:
